@@ -1,8 +1,11 @@
 import { ethers } from './ethers-5.7.esm.min.js'
-const div = document.createElement('div')
+const avgSection = document.createElement('section')
+const allSection = document.createElement('section')
+avgSection.appendChild(document.createElement('h2')).innerText = 'Average'
+allSection.appendChild(document.createElement('h2')).innerText = 'Both directions'
 const tables = []
-const avgChartCanvas = div.appendChild(document.createElement('canvas'))
-const allChartCanvas = div.appendChild(document.createElement('canvas'))
+const avgChartCanvas = avgSection.appendChild(document.createElement('canvas'))
+const allChartCanvas = allSection.appendChild(document.createElement('canvas'))
 const directions = [
   'ETH-to-rETH',
   'rETH-to-ETH'
@@ -23,7 +26,11 @@ const options = {
       }
     },
     y: {
-      type: 'linear'
+      type: 'linear',
+      title: {
+        display: true,
+        text: 'ETH'
+      }
     }
   }
 }
@@ -80,5 +87,8 @@ for (const [networkIndex, filename] of files.entries()) {
 allChart.update()
 avgChart.update()
 const body = document.querySelector('body')
-body.appendChild(div)
-tables.forEach(t => body.appendChild(t))
+body.appendChild(avgSection)
+body.appendChild(allSection)
+const tablesSection = allSection.appendChild(document.createElement('section'))
+tablesSection.appendChild(document.createElement('h3')).innerText = 'Tables'
+tables.forEach(t => allSection.appendChild(t))
