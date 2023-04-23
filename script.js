@@ -10,9 +10,10 @@ const directions = [
 const files = [
   '1%-1Inch-mainnet',
   '1%-1Inch-optimism',
-  '1%-1Inch-arbitrum'
+  '1%-1Inch-arbitrum',
+  '1%-uniswap-polygon'
 ]
-const scaleFactor = [1, 1, 100]
+const scaleFactor = [1, 1, 100, 100]
 const options = {
   scales: {
     x: {
@@ -52,7 +53,7 @@ for (const [networkIndex, filename] of files.entries()) {
     const thead = table.appendChild(document.createElement('thead'))
     const tr = thead.appendChild(document.createElement('tr'))
     tr.appendChild(document.createElement('th')).innerText = 'Date'
-    tr.appendChild(document.createElement('th')).innerText = `ETH for ${filename}`
+    tr.appendChild(document.createElement('th')).innerText = `ETH for ${fullname}`
     const tbody = table.appendChild(document.createElement('tbody'))
     data.forEach(d => {
       const date = new Date(d.x)
