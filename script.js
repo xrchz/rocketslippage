@@ -66,7 +66,8 @@ for (const [networkIndex, filename] of files.entries()) {
       const date = new Date(d.x)
       const tr = document.createElement('tr')
       const td = tr.appendChild(document.createElement('td'))
-      td.innerText = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`
+      const d2 = n => n.toString().padStart(2, '0')
+      td.innerText = `${d2(date.getDate())}/${d2(date.getMonth()+1)}/${date.getFullYear()}`
       tr.appendChild(document.createElement('td')).innerText = d.y
       tbody.appendChild(tr)
     })
@@ -90,5 +91,6 @@ const body = document.querySelector('body')
 body.appendChild(avgSection)
 body.appendChild(allSection)
 const tablesSection = allSection.appendChild(document.createElement('section'))
+tablesSection.classList.add('tables')
 tablesSection.appendChild(document.createElement('h3')).innerText = 'Tables'
-tables.forEach(t => allSection.appendChild(t))
+tables.forEach(t => tablesSection.appendChild(t))
