@@ -12,6 +12,7 @@ const files = [
   '1%-1Inch-optimism',
   '1%-1Inch-arbitrum'
 ]
+const scaleFactor = [1, 1, 100]
 const options = {
   scales: {
     x: {
@@ -27,7 +28,7 @@ const options = {
 }
 const allChart = new Chart(allChartCanvas, {type: 'line', data: {datasets: []}, options: options})
 const avgChart = new Chart(avgChartCanvas, {type: 'line', data: {datasets: []}, options: options})
-for (const filename of files) {
+for (const [networkIndex, filename] of files.entries()) {
   const avg = []
   for (const direction of directions) {
     const fullname = `${direction}-${filename}`
@@ -70,9 +71,10 @@ for (const filename of files) {
       rawData[i].y = rawData[i].y.add(d[1])
     })
   })
+  const sf = scaleFactor[networkIndex]
   const data = rawData.map(d =>
-    ({x: d.x, y: ethers.utils.formatEther(d.y.div(2))}))
-  avgChart.data.datasets.push({label: filename, data: data})
+    ({x: d.x, y: ethers.utils.formatEther(d.y.mul(sf).div(2))}))
+  avgChart.data.datasets.push({label: `${sf}×${filename}`, data: data})
 }
 allChart.update()
 avgChart.update()
