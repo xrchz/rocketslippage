@@ -3,6 +3,7 @@
 import { program } from 'commander'
 import { ethers } from 'ethers'
 import * as https from 'node:https'
+import Fraction from 'fraction.js'
 
 const ETHAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 const rETHAddress = new Map()
@@ -63,7 +64,7 @@ async function getProtocols(network) {
 async function getQuote(network, fromETH, amount) {
   await getProtocols(network)
   const tokens = [rETHAddress.get(network), ETHAddress]
-  if (fromETH) tokens.push(tokens.pop())
+  if (fromETH) tokens.push(tokens.shift())
   const quoteParams = {
     fromTokenAddress: tokens[0],
     toTokenAddress: tokens[1],
@@ -73,5 +74,41 @@ async function getQuote(network, fromETH, amount) {
   return await oneInchAPI(chainIds.get(network), 'quote', quoteParams)
 }
 
-console.log(`Mainnet quote rETH->ETH: ${JSON.stringify(await getQuote('mainnet', false, ethers.utils.parseEther(options.spotMainnet)))}`)
-console.log(`Optimism quote rETH->ETH: ${JSON.stringify(await getQuote('optimism', false, ethers.utils.parseEther(options.spotLayer2)))}`)
+async function getSpot(network, fromETH) {
+  const res = await getQuote(network, fromETH,
+    ethers.utils.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
+  return {
+    network: network,
+    fromTokenAmount: res.fromTokenAmount,
+    fromTokenAddress: res.fromToken.address,
+    toTokenAmount: res.toTokenAmount,
+    toTokenAddress: res.toToken.address
+  }
+}
+
+async function getSlippage(spot, amount) {
+  const fromETH = spot.fromTokenAddress === ETHAddress
+  const quote = await getQuote(spot.network, fromETH, amount)
+  const quoteRatio = new Fraction(quote.toTokenAmount.toString()).div(new Fraction(quote.fromTokenAmount.toString()))
+  const spotRatio = new Fraction(spot.toTokenAmount.toString()).div(new Fraction(spot.fromTokenAmount.toString()))
+  return quoteRatio.div(spotRatio)
+}
+
+const mainnetSpot = await getSpot('mainnet', false)
+const mainnetSpotRatio = new Fraction(mainnetSpot.toTokenAmount.toString()).div(new Fraction(mainnetSpot.fromTokenAmount.toString()))
+console.log(`Mainnet spot ratio rETH->ETH: ${mainnetSpot.toTokenAmount}/${mainnetSpot.fromTokenAmount} = ${mainnetSpotRatio}`)
+console.log(`Slippage @ 100 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('100'))}`)
+console.log(`Slippage @ 1000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('1000'))}`)
+console.log(`Slippage @ 10000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('10000'))}`)
+console.log(`Slippage @ 20000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('20000'))}`)
+console.log(`Slippage @ 50000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('50000'))}`)
+console.log(`Slippage @ 100000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('100000'))}`)
+
+const mainnetSpotR = await getSpot('mainnet', true)
+const mainnetSpotRatioR = new Fraction(mainnetSpotR.toTokenAmount.toString()).div(new Fraction(mainnetSpotR.fromTokenAmount.toString()))
+console.log(`Mainnet spot ratio ETH->rETH: ${mainnetSpotR.toTokenAmount}/${mainnetSpotR.fromTokenAmount} = ${mainnetSpotRatioR}`)
+
+/*
+const optimismSpot = await getSpot('optimism', false)
+console.log(`Optimism spot ratio rETH->ETH: ${optimismSpot.toTokenAmount}/${optimismSpot.fromTokenAmount}`)
+*/
