@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "dependencies": {
     "ethers": "5.6.9",
-    "commander": "9.4.0"
+    "commander": "9.4.0",
+    "fraction.js": "4.2.0"
   }
 }
