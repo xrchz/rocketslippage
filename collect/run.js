@@ -126,23 +126,25 @@ async function findOnePercentSlip(network, fromETH) {
   let max = spot.fromTokenAmount.mul(2)
   let slip
   while (true) {
-    slip = await getSlippage(spot, max)
-    while (slip.slippage.compare(targetRatio) >= 0) {
+    let maxSlip = await getSlippage(spot, max)
+    let minSlip = undefined
+    while (maxSlip.slippage.compare(targetRatio) >= 0) {
       min = max
+      minSlip = maxSlip
       max = max.mul(2)
       console.log(`Max: ${ethers.utils.formatEther(max)}`)
-      slip = await getSlippage(spot, max)
+      maxSlip = await getSlippage(spot, max)
     }
-    /* unnecessary?
-    slip = await getSlippage(spot, min)
-    while (slip.slippage.compare(targetRatio) <= 0) {
+    if (minSlip === undefined)
+      minSlip = await getSlippage(spot, min)
+    while (minSlip.slippage.compare(targetRatio) <= 0) {
       min = min.div(2)
       console.log(`Min: ${ethers.utils.formatEther(min)}`)
-      slip = await getSlippage(spot, min)
+      minSlip = await getSlippage(spot, min)
     }
-    */
     let queries = 0
     let amt = min
+    slip = minSlip
     while (slip.slippage.sub(targetRatio).abs().compare(tolerance) > 0) {
       amt = min.add(max).div(2)
       console.log(`Amt: ${ethers.utils.formatEther(amt)}`)
@@ -171,10 +173,9 @@ async function findDatapoints(network) {
   const toETHSlip = await findOnePercentSlip(network, false)
   const toETHAmount = toETHSlip.slip.quote.toTokenAmount
   const timestamp = Math.floor(Date.now() / 1000)
-  console.log(`${network}:`)
-  console.log(`ETH-to-rETH:`)
+  console.log(`ETH-to-rETH ${network}:`)
   console.log(`${timestamp},${fromETHAmount.toString()}`)
-  console.log(`rETH-to-ETH:`)
+  console.log(`rETH-to-ETH ${network}:`)
   console.log(`${timestamp},${toETHAmount.toString()}`)
 }
 
@@ -186,27 +187,3 @@ if (options.optimism)
   await findDatapoints('optimism')
 if (options.polygon)
   await findDatapoints('polygon')
-
-// console.log(JSON.stringify(await findOnePercentSlippageAmounts('mainnet', false)))
-// console.log(JSON.stringify(await findOnePercentSlippageAmounts('mainnet', true)))
-
-/*
-const mainnetSpot = await getSpot('mainnet', false)
-const mainnetSpotRatio = new Fraction(mainnetSpot.toTokenAmount.toString()).div(new Fraction(mainnetSpot.fromTokenAmount.toString()))
-console.log(`Mainnet spot ratio rETH->ETH: ${mainnetSpot.toTokenAmount}/${mainnetSpot.fromTokenAmount} = ${mainnetSpotRatio}`)
-console.log(`Slippage @ 100 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('100'))}`)
-console.log(`Slippage @ 1000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('1000'))}`)
-console.log(`Slippage @ 10000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('10000'))}`)
-console.log(`Slippage @ 20000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('20000'))}`)
-console.log(`Slippage @ 50000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('50000'))}`)
-console.log(`Slippage @ 100000 ETH: ${await getSlippage(mainnetSpot, ethers.utils.parseEther('100000'))}`)
-
-const mainnetSpotR = await getSpot('mainnet', true)
-const mainnetSpotRatioR = new Fraction(mainnetSpotR.toTokenAmount.toString()).div(new Fraction(mainnetSpotR.fromTokenAmount.toString()))
-console.log(`Mainnet spot ratio ETH->rETH: ${mainnetSpotR.toTokenAmount}/${mainnetSpotR.fromTokenAmount} = ${mainnetSpotRatioR}`)
-*/
-
-/*
-const optimismSpot = await getSpot('optimism', false)
-console.log(`Optimism spot ratio rETH->ETH: ${optimismSpot.toTokenAmount}/${optimismSpot.fromTokenAmount}`)
-*/
