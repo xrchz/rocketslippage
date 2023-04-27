@@ -173,9 +173,9 @@ async function findDatapoints(network) {
   const timestamp = Math.floor(Date.now() / 1000)
   console.log(`${network}:`)
   console.log(`ETH-to-rETH:`)
-  console.log(`${timestamp},${toETHAmount.toString()}`)
-  console.log(`rETH-to-ETH:`)
   console.log(`${timestamp},${fromETHAmount.toString()}`)
+  console.log(`rETH-to-ETH:`)
+  console.log(`${timestamp},${toETHAmount.toString()}`)
 }
 
 if (options.mainnet)
