@@ -25,7 +25,8 @@ program
   .option('--polygon', 'do not skip polygon')
   .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.io/v5.0')
   .option('--tolerance <zeros>', 'How precise to be about 1%: number of zeros needed in 0.99[00000...]', 2)
-  .option('--rateLimit <millis>', 'How many milliseconds to space API calls out by', 1000)
+  .option('--rate-limit <millis>', 'How many milliseconds to space API calls out by', 1000)
+  .option('--expiry <queries>', 'Maximum number of binary search steps before refreshing spot', 10)
   .option('--spot-mainnet', 'ETH amount for spot price on mainnet', '10')
   .option('--spot-layer2', 'ETH amount for spot price on not mainnet', '1')
 
@@ -113,53 +114,78 @@ async function getSlippage(spot, amount) {
   const quoteRatio = getQuoteRatio(quote)
   const slippage = quoteRatio.div(spot.ratio)
   console.log(`... got ${slippage}`)
-  return slippage
+  return {slippage: slippage, quote: quote}
 }
 
 const targetRatio = new Fraction('0.99')
 const tolerance = new Fraction(`0.00${'0'.repeat(options.tolerance)}1`)
 
-async function findOnePercentSlippageAmounts(network, fromETH) {
+async function findOnePercentSlip(network, fromETH) {
   let spot = await getSpot(network, fromETH)
   let min = spot.fromTokenAmount.div(2)
   let max = spot.fromTokenAmount.mul(2)
-  let amt
+  let slip
   while (true) {
-    let slippage
-    slippage = await getSlippage(spot, max)
-    while (slippage.compare(targetRatio) >= 0) {
+    slip = await getSlippage(spot, max)
+    while (slip.slippage.compare(targetRatio) >= 0) {
       min = max
       max = max.mul(2)
       console.log(`Max: ${ethers.utils.formatEther(max)}`)
-      slippage = await getSlippage(spot, max)
+      slip = await getSlippage(spot, max)
     }
     /* unnecessary?
-    slippage = await getSlippage(spot, min)
-    while (slippage.compare(targetRatio) <= 0) {
+    slip = await getSlippage(spot, min)
+    while (slip.slippage.compare(targetRatio) <= 0) {
       min = min.div(2)
       console.log(`Min: ${ethers.utils.formatEther(min)}`)
-      slippage = await getSlippage(spot, min)
+      slip = await getSlippage(spot, min)
     }
     */
-    amt = min
-    while (slippage.sub(targetRatio).abs().compare(tolerance) > 0) {
+    let queries = 0
+    let amt = min
+    while (slip.slippage.sub(targetRatio).abs().compare(tolerance) > 0) {
       amt = min.add(max).div(2)
       console.log(`Amt: ${ethers.utils.formatEther(amt)}`)
-      slippage = await getSlippage(spot, amt)
-      if (slippage.compare(targetRatio) <= 0) {
+      queries += 1
+      slip = await getSlippage(spot, amt)
+      if (slip.slippage.compare(targetRatio) <= 0) {
         max = amt
       }
       else {
         min = amt
       }
+      if (queries > options.expiry)
+        break
     }
     spot = await getSpot(network, fromETH)
-    slippage = await getSlippage(spot, amt)
-    if (slippage.sub(targetRatio).abs().compare(tolerance) <= 0)
+    slip = await getSlippage(spot, amt)
+    if (slip.slippage.sub(targetRatio).abs().compare(tolerance) <= 0)
       break
   }
-  return {spot: spot, amount: amt, timestamp: Math.floor(Date.now() / 1000)}
+  return {spot: spot, slip: slip}
 }
+
+async function findDatapoints(network) {
+  const fromETHSlip = await findOnePercentSlip(network, true)
+  const fromETHAmount = fromETHSlip.slip.quote.fromTokenAmount
+  const toETHSlip = await findOnePercentSlip(network, false)
+  const toETHAmount = toETHSlip.slip.quote.toTokenAmount
+  const timestamp = Math.floor(Date.now() / 1000)
+  console.log(`${network}:`)
+  console.log(`ETH-to-rETH:`)
+  console.log(`${timestamp},${toETHAmount.toString()}`)
+  console.log(`rETH-to-ETH:`)
+  console.log(`${timestamp},${fromETHAmount.toString()}`)
+}
+
+if (options.mainnet)
+  await findDatapoints('mainnet')
+if (options.arbitrum)
+  await findDatapoints('arbitrum')
+if (options.optimism)
+  await findDatapoints('optimism')
+if (options.polygon)
+  await findDatapoints('polygon')
 
 // console.log(JSON.stringify(await findOnePercentSlippageAmounts('mainnet', false)))
 // console.log(JSON.stringify(await findOnePercentSlippageAmounts('mainnet', true)))
