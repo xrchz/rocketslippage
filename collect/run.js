@@ -25,7 +25,6 @@ program
   .option('--polygon', 'do not skip polygon')
   .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.io/v5.0')
   .option('--tolerance <zeros>', 'How precise to be about 1%: number of zeros needed in 0.99[00000...]', 2)
-  .option('--rate-limit <millis>', 'How many milliseconds to space API calls out by', 1000)
   .option('--expiry <queries>', 'Maximum number of binary search steps before refreshing spot', 10)
   .option('--spot-mainnet', 'ETH amount for spot price on mainnet', '10')
   .option('--spot-layer2', 'ETH amount for spot price on not mainnet', '1')
@@ -33,17 +32,27 @@ program
 program.parse()
 const options = program.opts()
 
-let milliseconds = Date.now()
+const maxCallsPerPeriod = 20
+const timePeriod = 70000
+const apiCallTimes = []
+function updateApiCallTimes() {
+  while (apiCallTimes.length && apiCallTimes[0] < (Date.now() - timePeriod))
+    apiCallTimes.shift()
+}
+
+async function rateLimit() {
+  while (apiCallTimes.length >= maxCallsPerPeriod) {
+    await new Promise(resolve => {
+      setTimeout(() => resolve(updateApiCallTimes()),
+        Math.max(10, apiCallTimes[0] - (Date.now() - timePeriod)))
+    })
+  }
+  await new Promise(resolve => setTimeout(resolve, 500))
+}
 
 function oneInchAPI(chainId, method, query) {
   const queryString = new URLSearchParams(query).toString()
   const url = `${options.oneInchAPI}/${chainId}/${method}?${queryString}`
-  const wait = new Promise(resolve => {
-    const lastMilliseconds = milliseconds
-    milliseconds = Date.now()
-    const diff = lastMilliseconds - milliseconds
-    setTimeout(resolve, diff < options.rateLimit ? options.rateLimit - diff : 1)
-  })
   const call = new Promise((resolve, reject) => {
     const req = https.get(url, res => {
       if (res.statusCode !== 200) {
@@ -61,7 +70,10 @@ function oneInchAPI(chainId, method, query) {
     })
     req.end()
   })
-  return Promise.all([wait, call]).then(a => a.pop())
+  return Promise.all([rateLimit(), call]).then(a => {
+    apiCallTimes.push(Date.now())
+    return a.pop()
+  })
 }
 
 const protocols = new Map()
