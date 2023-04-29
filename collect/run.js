@@ -4,6 +4,7 @@ import { program } from 'commander'
 import { ethers } from 'ethers'
 import * as https from 'node:https'
 import Fraction from 'fraction.js'
+import * as fs from 'node:fs/promises'
 
 const ETHAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 const rETHAddress = new Map()
@@ -25,6 +26,7 @@ program
   .option('--polygon', 'do not skip polygon')
   .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.io/v5.0')
   .option('--tolerance <zeros>', 'How precise to be about 1%: number of zeros needed in 0.99[00000...]', 2)
+  .option('--filename <template>', 'Template for files to append csv datapoints to', '../<direction>-1%-1Inch-<network>.csv')
   .option('--expiry <queries>', 'Maximum number of binary search steps before refreshing spot', 10)
   .option('--spot-mainnet', 'ETH amount for spot price on mainnet', '10')
   .option('--spot-layer2', 'ETH amount for spot price on not mainnet', '1')
@@ -184,11 +186,20 @@ async function findDatapoints(network) {
   const fromETHAmount = fromETHSlip.slip.quote.fromTokenAmount
   const toETHSlip = await findOnePercentSlip(network, false)
   const toETHAmount = toETHSlip.slip.quote.toTokenAmount
+
   const timestamp = Math.floor(Date.now() / 1000)
-  console.log(`ETH-to-rETH ${network}:`)
-  console.log(`${timestamp},${fromETHAmount.toString()}`)
-  console.log(`rETH-to-ETH ${network}:`)
-  console.log(`${timestamp},${toETHAmount.toString()}`)
+  const filename = options.filename.replace('<network>', network)
+
+  async function w(direction, amount) {
+    const f = filename.replace('<direction>', direction)
+    const l = `${timestamp},${amount.toString()}\n`
+    console.log(`Appending to ${f}:`)
+    process.stdout.write(l)
+    await fs.writeFile(f, l, {flag: 'a'})
+  }
+
+  await w('ETH-to-rETH', fromETHAmount)
+  await w('rETH-to-ETH', toETHAmount)
 }
 
 if (options.mainnet)
