@@ -35,7 +35,7 @@ program.parse()
 const options = program.opts()
 
 const maxCallsPerPeriod = 20
-const timePeriod = 70000
+const timePeriod = 80000
 const apiCallTimes = []
 function updateApiCallTimes() {
   while (apiCallTimes.length && apiCallTimes[0] < (Date.now() - timePeriod))
