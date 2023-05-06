@@ -16,7 +16,7 @@ const files = [
   '1%-1Inch-arbitrum',
   '1%-uniswap-polygon'
 ]
-const scaleFactor = [1, 1, 100, 100]
+const scaleFactor = [1, 1, 10, 100]
 const options = {
   scales: {
     x: {
