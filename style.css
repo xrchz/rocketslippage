@@ -2,6 +2,12 @@ body > section {
   padding-left: 2em;
   padding-right: 2em;
 }
+section.src {
+  text-align: right;
+}
+a {
+  text-decoration: none;
+}
 section.tables {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,9 @@
 import { ethers } from './ethers-5.7.esm.min.js'
+const srcSection = document.createElement('section')
+srcSection.classList.add('src')
+const srcA = srcSection.appendChild(document.createElement('a'))
+srcA.innerText = 'code + data'
+srcA.href = 'https://github.com/xrchz/rETH-slippage'
 const avgSection = document.createElement('section')
 const allSection = document.createElement('section')
 avgSection.appendChild(document.createElement('h2')).innerText = 'Average'
@@ -88,6 +93,7 @@ for (const [networkIndex, filename] of files.entries()) {
 allChart.update()
 avgChart.update()
 const body = document.querySelector('body')
+body.appendChild(srcSection)
 body.appendChild(avgSection)
 body.appendChild(allSection)
 const tablesSection = allSection.appendChild(document.createElement('section'))
