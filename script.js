@@ -73,6 +73,7 @@ for (const [networkIndex, filename] of files.entries()) {
       const td = tr.appendChild(document.createElement('td'))
       const d2 = n => n.toString().padStart(2, '0')
       td.innerText = `${d2(date.getDate())}/${d2(date.getMonth()+1)}/${date.getFullYear()}`
+      td.title = date.toUTCString()
       tr.appendChild(document.createElement('td')).innerText = d.y
       tbody.appendChild(tr)
     })
