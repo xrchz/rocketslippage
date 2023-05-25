@@ -34,8 +34,9 @@ program
 program.parse()
 const options = program.opts()
 
-const maxCallsPerPeriod = 20
-const timePeriod = 80000
+const maxCallsPerPeriod = 5
+const timePeriod = 60000
+const betweenDelay = 8000
 const apiCallTimes = []
 function updateApiCallTimes() {
   while (apiCallTimes.length && apiCallTimes[0] < (Date.now() - timePeriod))
@@ -49,7 +50,7 @@ async function rateLimit() {
         Math.max(10, apiCallTimes[0] - (Date.now() - timePeriod)))
     })
   }
-  await new Promise(resolve => setTimeout(resolve, 500))
+  await new Promise(resolve => setTimeout(resolve, betweenDelay))
 }
 
 function oneInchAPI(chainId, method, query) {
