@@ -183,12 +183,16 @@ async function findOnePercentSlip(network, fromETH) {
 }
 
 async function findDatapoints(network) {
+  const beforeTimestamp = Date.now()
+
   const fromETHSlip = await findOnePercentSlip(network, true)
   const fromETHAmount = fromETHSlip.slip.quote.fromTokenAmount
   const toETHSlip = await findOnePercentSlip(network, false)
   const toETHAmount = toETHSlip.slip.quote.toTokenAmount
 
-  const timestamp = Math.floor(Date.now() / 1000)
+  const afterTimestamp = Date.now()
+
+  const timestamp = Math.floor((beforeTimestamp + afterTimestamp) / 2000)
   const filename = options.filename.replace('<network>', network)
 
   async function w(direction, amount) {
