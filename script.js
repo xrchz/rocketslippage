@@ -1,4 +1,4 @@
-import { ethers } from './ethers-5.7.esm.min.js'
+import { ethers } from './ethers-6.6.2.min.js'
 const srcSection = document.createElement('section')
 srcSection.classList.add('src')
 const srcA = srcSection.appendChild(document.createElement('a'))
@@ -21,7 +21,7 @@ const files = [
   '1%-1Inch-arbitrum',
   '1%-uniswap-polygon'
 ]
-const scaleFactor = [1, 1, 10, 100]
+const scaleFactor = [1n, 1n, 10n, 100n]
 const options = {
   scales: {
     x: {
@@ -52,12 +52,12 @@ for (const [networkIndex, filename] of files.entries()) {
     lines.pop()
     const rawData = lines.map(line => {
       const [timestampSecs, wei] = line.split(',')
-      return [parseInt(timestampSecs), ethers.BigNumber.from(wei)]
+      return [parseInt(timestampSecs), BigInt(wei)]
     })
     const data = rawData.map(d => {
       const [timestampSecs, wei] = d
       return {x: timestampSecs * 1000,
-              y: ethers.utils.formatEther(wei)}
+              y: ethers.formatEther(wei)}
     })
     avg.push(rawData)
     allChart.data.datasets.push({label: fullname, data: data})
@@ -80,15 +80,15 @@ for (const [networkIndex, filename] of files.entries()) {
     tables.push(table)
   }
   const rawData = avg[0].map(d =>
-    ({x: d[0] * 1000, y: ethers.BigNumber.from(0)}))
+    ({x: d[0] * 1000, y: 0n}))
   avg.forEach(row => {
     row.forEach((d, i) => {
-      rawData[i].y = rawData[i].y.add(d[1])
+      rawData[i].y += d[1]
     })
   })
   const sf = scaleFactor[networkIndex]
   const data = rawData.map(d =>
-    ({x: d.x, y: ethers.utils.formatEther(d.y.mul(sf).div(2))}))
+    ({x: d.x, y: ethers.formatEther(d.y * sf / 2n)}))
   avgChart.data.datasets.push({label: `${sf}×${filename}`, data: data})
 }
 allChart.update()
