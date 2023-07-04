@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 
-import { program } from 'commander'
+import { program, Option } from 'commander'
 import { ethers } from 'ethers'
 import * as https from 'node:https'
 import Fraction from 'fraction.js'
 import * as fs from 'node:fs/promises'
 
 const ETHAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-const rETHAddress = new Map()
-rETHAddress.set('mainnet', '0xae78736Cd615f374D3085123A210448E74Fc6393')
-rETHAddress.set('arbitrum', '0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8')
-rETHAddress.set('optimism', '0x9bcef72be871e61ed4fbbc7630889bee758eb81d')
-rETHAddress.set('polygon', '0x0266F4F08D82372CF0FcbCCc0Ff74309089c74d1')
+const allTokenAddresses = {rETH: new Map(), RPL: new Map()}
+allTokenAddresses['rETH'].set('mainnet', '0xae78736Cd615f374D3085123A210448E74Fc6393')
+allTokenAddresses['rETH'].set('arbitrum', '0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8')
+allTokenAddresses['rETH'].set('optimism', '0x9bcef72be871e61ed4fbbc7630889bee758eb81d')
+allTokenAddresses['rETH'].set('polygon', '0x0266F4F08D82372CF0FcbCCc0Ff74309089c74d1')
+allTokenAddresses['RPL'].set('mainnet', '0xD33526068D116cE69F19A9ee46F0bd304F21A51f')
+allTokenAddresses['RPL'].set('arbitrum', '0xB766039cc6DB368759C1E56B79AFfE831d0Cc507')
+allTokenAddresses['RPL'].set('optimism', '0xc81d1f0eb955b0c020e5d5b264e1ff72c14d1401')
+allTokenAddresses['RPL'].set('polygon', '0x7205705771547cf79201111b4bd8aaf29467b9ec')
+
 
 const chainIds = new Map()
 chainIds.set('mainnet', 1)
@@ -20,6 +25,7 @@ chainIds.set('optimism', 10)
 chainIds.set('polygon', 137)
 
 program
+  .addOption(new Option('--token <sym>', 'token to collect ETH paired liquidity for').choices(['rETH', 'RPL']).default('rETH'))
   .option('--no-mainnet', 'skip mainnet')
   .option('--no-optimism', 'skip optimism')
   .option('--no-arbitrum', 'skip arbitrum')
@@ -33,6 +39,8 @@ program
 
 program.parse()
 const options = program.opts()
+
+const tokenAddress = allTokenAddresses[options.token]
 
 const maxCallsPerPeriod = 5
 const timePeriod = 60000
@@ -90,7 +98,7 @@ async function getProtocols(network) {
 
 async function getQuote(network, fromETH, amount) {
   await getProtocols(network)
-  const tokens = [rETHAddress.get(network), ETHAddress]
+  const tokens = [tokenAddress.get(network), ETHAddress]
   if (fromETH) tokens.push(tokens.shift())
   const quoteParams = {
     fromTokenAddress: tokens[0],
@@ -106,7 +114,7 @@ function getQuoteRatio(q) {
 }
 
 async function getSpot(network, fromETH) {
-  console.log(`Getting spot for ${network} ${fromETH ? 'from ETH' : 'to ETH'}...`)
+  console.log(`Getting spot for ${options.token} on ${network} ${fromETH ? 'from ETH' : 'to ETH'}...`)
   const res = await getQuote(network, fromETH,
     ethers.utils.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
   const spot = {
@@ -203,8 +211,8 @@ async function findDatapoints(network) {
     await fs.writeFile(f, l, {flag: 'a'})
   }
 
-  await w('ETH-to-rETH', fromETHAmount)
-  await w('rETH-to-ETH', toETHAmount)
+  await w(`ETH-to-${options.token}`, fromETHAmount)
+  await w(`${options.token}-to-ETH`, toETHAmount)
 }
 
 if (options.mainnet)
