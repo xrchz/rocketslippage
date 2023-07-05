@@ -53,10 +53,30 @@ const options = {
         text: 'ETH'
       }
     }
+  },
+  plugins: {
+    zoom: {
+      zoom: {
+        drag: {
+          enabled: true
+        },
+        pinch: {
+          enabled: true
+        }
+      }
+    }
   }
 }
 const allChart = new Chart(allChartCanvas, {type: 'line', data: {datasets: []}, options: options})
+const resetAllChart = allSection.appendChild(document.createElement('input'))
+resetAllChart.type = 'button'
+resetAllChart.value = 'reset zoom'
+resetAllChart.addEventListener('click', () => allChart.resetZoom())
 const avgChart = new Chart(avgChartCanvas, {type: 'line', data: {datasets: []}, options: options})
+const resetAvgChart = avgSection.appendChild(document.createElement('input'))
+resetAvgChart.type = 'button'
+resetAvgChart.value = 'reset zoom'
+resetAvgChart.addEventListener('click', () => avgChart.resetZoom())
 for (const [networkIndex, filename] of files.entries()) {
   const avg = []
   for (const direction of directions) {
