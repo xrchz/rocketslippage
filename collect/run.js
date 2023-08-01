@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+const logTime = () => Intl.DateTimeFormat('en-GB',
+  {year: '2-digit', month: '2-digit', day: '2-digit',
+   hour: '2-digit', minute: '2-digit', second: '2-digit'})
+  .format(new Date())
+
 import { program, Option } from 'commander'
 import { ethers } from 'ethers'
 import * as https from 'node:https'
@@ -114,7 +119,7 @@ function getQuoteRatio(q) {
 }
 
 async function getSpot(network, fromETH) {
-  console.log(`Getting spot for ${options.token} on ${network} ${fromETH ? 'from ETH' : 'to ETH'}...`)
+  console.log(`${logTime()} Getting spot for ${options.token} on ${network} ${fromETH ? 'from ETH' : 'to ETH'}...`)
   const res = await getQuote(network, fromETH,
     ethers.utils.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
   const spot = {
@@ -131,7 +136,7 @@ async function getSpot(network, fromETH) {
 }
 
 async function getSlippage(spot, amount) {
-  console.log(`Getting slippage @ ${ethers.utils.formatEther(amount)}...`)
+  console.log(`${logTime()} Getting slippage @ ${ethers.utils.formatEther(amount)}...`)
   const fromETH = spot.fromTokenAddress === ETHAddress
   const quote = await getQuote(spot.network, fromETH, amount)
   const quoteRatio = getQuoteRatio(quote)
@@ -155,14 +160,12 @@ async function findOnePercentSlip(network, fromETH) {
       min = max
       minSlip = maxSlip
       max = max.mul(2)
-      console.log(`Max: ${ethers.utils.formatEther(max)}`)
       maxSlip = await getSlippage(spot, max)
     }
     if (minSlip === undefined)
       minSlip = await getSlippage(spot, min)
     while (minSlip.slippage.compare(targetRatio) <= 0) {
       min = min.div(2)
-      console.log(`Min: ${ethers.utils.formatEther(min)}`)
       minSlip = await getSlippage(spot, min)
     }
     let queries = 0
@@ -170,7 +173,6 @@ async function findOnePercentSlip(network, fromETH) {
     slip = minSlip
     while (slip.slippage.sub(targetRatio).abs().compare(tolerance) > 0) {
       amt = min.add(max).div(2)
-      console.log(`Amt: ${ethers.utils.formatEther(amt)}`)
       queries += 1
       slip = await getSlippage(spot, amt)
       if (slip.slippage.compare(targetRatio) <= 0) {
@@ -206,7 +208,7 @@ async function findDatapoints(network) {
   async function w(direction, amount) {
     const f = filename.replace('<direction>', direction)
     const l = `${timestamp},${amount.toString()}\n`
-    console.log(`Appending to ${f}:`)
+    console.log(`${logTime()} Appending to ${f}:`)
     process.stdout.write(l)
     await fs.writeFile(f, l, {flag: 'a'})
   }
