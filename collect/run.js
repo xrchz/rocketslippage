@@ -5,6 +5,7 @@ const logTime = () => Intl.DateTimeFormat('en-GB',
    hour: '2-digit', minute: '2-digit', second: '2-digit'})
   .format(new Date())
 
+import 'dotenv/config'
 import { program, Option } from 'commander'
 import { ethers } from 'ethers'
 import * as https from 'node:https'
@@ -35,7 +36,7 @@ program
   .option('--no-optimism', 'skip optimism')
   .option('--no-arbitrum', 'skip arbitrum')
   .option('--polygon', 'do not skip polygon')
-  .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.io/v5.0')
+  .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.dev/swap/v5.2')
   .option('--tolerance <zeros>', 'How precise to be about 1%: number of zeros needed in 0.99[00000...]', 2)
   .option('--filename <template>', 'Template for files to append csv datapoints to', '../<direction>-1%-1Inch-<network>.csv')
   .option('--expiry <queries>', 'Maximum number of binary search steps before refreshing spot', 10)
@@ -70,7 +71,7 @@ function oneInchAPI(chainId, method, query) {
   const queryString = new URLSearchParams(query).toString()
   const url = `${options.oneInchAPI}/${chainId}/${method}?${queryString}`
   const call = new Promise((resolve, reject) => {
-    const req = https.get(url, res => {
+    const req = https.get(url, {headers: {'Authorization': `Bearer ${process.env.API_KEY}`}}, res => {
       if (res.statusCode !== 200) {
         console.error(`${url} returned ${res.statusCode}: ${res.statusMessage}`)
         reject(res)
@@ -106,16 +107,20 @@ async function getQuote(network, fromETH, amount) {
   const tokens = [tokenAddress.get(network), ETHAddress]
   if (fromETH) tokens.push(tokens.shift())
   const quoteParams = {
-    fromTokenAddress: tokens[0],
-    toTokenAddress: tokens[1],
+    src: tokens[0],
+    dst: tokens[1],
     amount: amount.toString(),
     protocols: protocols.get(network)
   }
-  return await oneInchAPI(chainIds.get(network), 'quote', quoteParams)
+  const res = await oneInchAPI(chainIds.get(network), 'quote', quoteParams)
+  res.fromAmount = amount
+  res.fromToken = {address: quoteParams.src}
+  res.toToken = {address: quoteParams.dst}
+  return res
 }
 
 function getQuoteRatio(q) {
-  return new Fraction(q.toTokenAmount.toString()).div(new Fraction(q.fromTokenAmount.toString()))
+  return new Fraction(q.toAmount.toString()).div(new Fraction(q.fromAmount.toString()))
 }
 
 async function getSpot(network, fromETH) {
@@ -124,9 +129,9 @@ async function getSpot(network, fromETH) {
     ethers.utils.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
   const spot = {
     network: network,
-    fromTokenAmount: ethers.BigNumber.from(res.fromTokenAmount),
+    fromAmount: ethers.BigNumber.from(res.fromAmount),
     fromTokenAddress: res.fromToken.address,
-    toTokenAmount: ethers.BigNumber.from(res.toTokenAmount),
+    toAmount: ethers.BigNumber.from(res.toAmount),
     toTokenAddress: res.toToken.address,
   }
   const ratio = getQuoteRatio(spot)
@@ -150,8 +155,8 @@ const tolerance = new Fraction(`0.00${'0'.repeat(options.tolerance)}1`)
 
 async function findOnePercentSlip(network, fromETH) {
   let spot = await getSpot(network, fromETH)
-  let min = spot.fromTokenAmount.div(2)
-  let max = spot.fromTokenAmount.mul(2)
+  let min = spot.fromAmount.div(2)
+  let max = spot.fromAmount.mul(2)
   let slip
   while (true) {
     let maxSlip = await getSlippage(spot, max)
@@ -196,9 +201,9 @@ async function findDatapoints(network) {
   const beforeTimestamp = Date.now()
 
   const fromETHSlip = await findOnePercentSlip(network, true)
-  const fromETHAmount = fromETHSlip.slip.quote.fromTokenAmount
+  const fromETHAmount = fromETHSlip.slip.quote.fromAmount
   const toETHSlip = await findOnePercentSlip(network, false)
-  const toETHAmount = toETHSlip.slip.quote.toTokenAmount
+  const toETHAmount = toETHSlip.slip.quote.toAmount
 
   const afterTimestamp = Date.now()
 
