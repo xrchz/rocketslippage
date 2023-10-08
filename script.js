@@ -37,7 +37,7 @@ filesPerToken.set('rETH', [
 ])
 filesPerToken.set('RPL', ['1%-1Inch-mainnet'])
 const files = filesPerToken.get(token)
-const scaleFactor = [1n, 1n, 10n, 100n]
+const scaleFactor = [1n, 1n, 1n, 100n]
 const options = {
   scales: {
     x: {
