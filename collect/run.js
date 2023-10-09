@@ -126,12 +126,12 @@ function getQuoteRatio(q) {
 async function getSpot(network, fromETH) {
   console.log(`${logTime()} Getting spot for ${options.token} on ${network} ${fromETH ? 'from ETH' : 'to ETH'}...`)
   const res = await getQuote(network, fromETH,
-    ethers.utils.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
+    ethers.parseEther(network === 'mainnet' ? options.spotMainnet : options.spotLayer2))
   const spot = {
     network: network,
-    fromAmount: ethers.BigNumber.from(res.fromAmount),
+    fromAmount: BigInt(res.fromAmount),
     fromTokenAddress: res.fromToken.address,
-    toAmount: ethers.BigNumber.from(res.toAmount),
+    toAmount: BigInt(res.toAmount),
     toTokenAddress: res.toToken.address,
   }
   const ratio = getQuoteRatio(spot)
@@ -141,7 +141,7 @@ async function getSpot(network, fromETH) {
 }
 
 async function getSlippage(spot, amount) {
-  console.log(`${logTime()} Getting slippage @ ${ethers.utils.formatEther(amount)}...`)
+  console.log(`${logTime()} Getting slippage @ ${ethers.formatEther(amount)}...`)
   const fromETH = spot.fromTokenAddress === ETHAddress
   const quote = await getQuote(spot.network, fromETH, amount)
   const quoteRatio = getQuoteRatio(quote)
@@ -155,8 +155,8 @@ const tolerance = new Fraction(`0.00${'0'.repeat(options.tolerance)}1`)
 
 async function findOnePercentSlip(network, fromETH) {
   let spot = await getSpot(network, fromETH)
-  let min = spot.fromAmount.div(2)
-  let max = spot.fromAmount.mul(2)
+  let min = spot.fromAmount / 2n
+  let max = spot.fromAmount * 2n
   let slip
   while (true) {
     let maxSlip = await getSlippage(spot, max)
@@ -164,20 +164,20 @@ async function findOnePercentSlip(network, fromETH) {
     while (maxSlip.slippage.compare(targetRatio) >= 0) {
       min = max
       minSlip = maxSlip
-      max = max.mul(2)
+      max = max * 2n
       maxSlip = await getSlippage(spot, max)
     }
     if (minSlip === undefined)
       minSlip = await getSlippage(spot, min)
     while (minSlip.slippage.compare(targetRatio) <= 0) {
-      min = min.div(2)
+      min = min / 2n
       minSlip = await getSlippage(spot, min)
     }
     let queries = 0
     let amt = min
     slip = minSlip
     while (slip.slippage.sub(targetRatio).abs().compare(tolerance) > 0) {
-      amt = min.add(max).div(2)
+      amt = (min + max) / 2n
       queries += 1
       slip = await getSlippage(spot, amt)
       if (slip.slippage.compare(targetRatio) <= 0) {

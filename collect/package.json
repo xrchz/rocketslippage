@@ -2,11 +2,11 @@
   "name": "rETH slippage data collection",
   "type": "module",
   "license": "GPL-3.0-or-later",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "dependencies": {
-    "ethers": "5.6.9",
+    "ethers": "6",
     "dotenv": "16",
-    "commander": "9.4.0",
-    "fraction.js": "4.2.0"
+    "commander": "9",
+    "fraction.js": "4"
   }
 }
