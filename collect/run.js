@@ -48,9 +48,9 @@ const options = program.opts()
 
 const tokenAddress = allTokenAddresses[options.token]
 
-const maxCallsPerPeriod = 5
+const maxCallsPerPeriod = 4
 const timePeriod = 60000
-const betweenDelay = 8000
+const betweenDelay = 10000
 const apiCallTimes = []
 function updateApiCallTimes() {
   while (apiCallTimes.length && apiCallTimes[0] < (Date.now() - timePeriod))
