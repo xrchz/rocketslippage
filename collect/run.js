@@ -36,7 +36,7 @@ program
   .option('--optimism', 'optimism')
   .option('--arbitrum', 'arbitrum')
   .option('--polygon', 'polygon')
-  .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.dev/swap/v5.2')
+  .option('--oneInchAPI <url>', '1Inch API base URL', 'https://api.1inch.dev/swap/v6.0')
   .option('--tolerance <zeros>', 'How precise to be about 1%: number of zeros needed in 0.99[00000...]', 2)
   .option('--filename <template>', 'Template for files to append csv datapoints to', '../<direction>-1%-1Inch-<network>.csv')
   .option('--expiry <queries>', 'Maximum number of binary search steps before refreshing spot', 10)
@@ -93,6 +93,7 @@ function oneInchAPI(chainId, method, query) {
   })
 }
 
+/*
 const protocols = new Map()
 
 async function getProtocols(network) {
@@ -101,21 +102,24 @@ async function getProtocols(network) {
   const names = res.protocols.map(x => x.id).filter(name => name !== 'ROCKET_POOL')
   protocols.set(network, names.join())
 }
+*/
 
 async function getQuote(network, fromETH, amount) {
-  await getProtocols(network)
+  // await getProtocols(network)
   const tokens = [tokenAddress.get(network), ETHAddress]
   if (fromETH) tokens.push(tokens.shift())
   const quoteParams = {
     src: tokens[0],
     dst: tokens[1],
     amount: amount.toString(),
-    protocols: protocols.get(network)
+    // protocols: protocols.get(network)
+    excludedProtocols: 'ROCKET_POOL'
   }
   const res = await oneInchAPI(chainIds.get(network), 'quote', quoteParams)
   res.fromAmount = amount
   res.fromToken = {address: quoteParams.src}
   res.toToken = {address: quoteParams.dst}
+  res.toAmount = res.dstAmount
   return res
 }
 
